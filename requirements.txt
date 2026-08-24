@@ -1,0 +1,6 @@
+streamlit
+Pillow
+pypdf
+librosa
+numpy
+opencv-python-headless
