@@ -3,7 +3,6 @@ import os
 import hashlib
 from PIL import Image, ImageChops
 
-# --- Import our core engine logic ---
 class UkweliLensEngine:
     def __init__(self):
         self.magic_bytes_table = {
@@ -17,13 +16,11 @@ class UkweliLensEngine:
         }
 
     def verify_file_bytes(self, file_bytes, file_name):
-        """Security Feature: Validates Magic Bytes, File Size, and generates SHA-256"""
         MAX_SIZE = 50 * 1024 * 1024
         if len(file_bytes) > MAX_SIZE:
             return False, f"🚨 SECURITY ALERT: File is too large! Maximum allowed is 50MB.", None
 
         file_hash = hashlib.sha256(file_bytes).hexdigest()
-
         file_header = file_bytes[:16]
         is_valid_type = False
         for header in self.magic_bytes_table.keys():
@@ -39,7 +36,7 @@ class UkweliLensEngine:
     def analyze_image(self, uploaded_file):
         orig = Image.open(uploaded_file).convert('RGB')
         temp = "temp_web.jpg"
-        orig.save(temp, 'JPEG', quality=90)
+        orig.save(temp, 'JPEG', quality=95) # Kulainisha vipimo vya ELA ili kuzuia kelele za picha
         resaved = Image.open(temp)
 
         ela = ImageChops.difference(orig, resaved)
@@ -47,9 +44,12 @@ class UkweliLensEngine:
         pixel_changes = sum([sum(p) if isinstance(p, tuple) else p for p in stat]) / len(stat)
         os.remove(temp)
 
-        ai_score = min(100, max(0, int(pixel_changes * 45)))
+        # Usawazishaji wa mahesabu ili kuzuia False Positives
+        ai_score = min(100, max(0, int(pixel_changes * 30)))
         human_score = 100 - ai_score
-        verdict = "🛡️ GENUINE MEDIA" if ai_score < 35 else "🚨 AI GENERATED / MANIPULATED"
+
+        # MAREKEBISHO YA KIMSINGI: Hukumu inafuata namba kubwa zaidi!
+        verdict = "🛡️ GENUINE MEDIA" if human_score > ai_score else "🚨 AI GENERATED / MANIPULATED"
         return verdict, human_score, ai_score
 
     def analyze_document(self, uploaded_file):
@@ -61,12 +61,12 @@ class UkweliLensEngine:
             if "ai" in creator or "gpt" in creator or "bot" in creator:
                 ai_score = 80
             else:
-                ai_score = 15
+                ai_score = 10
         except Exception:
-            ai_score = 75 
+            ai_score = 40 
 
         human_score = 100 - ai_score
-        verdict = "🛡️ GENUINE DOCUMENT" if ai_score < 40 else "🚨 AI GENERATED TEXT"
+        verdict = "🛡️ GENUINE DOCUMENT" if human_score > ai_score else "🚨 AI GENERATED TEXT"
         return verdict, human_score, ai_score
 
     def analyze_audio(self, file_bytes):
@@ -83,18 +83,18 @@ class UkweliLensEngine:
             flatness = librosa.feature.spectral_flatness(y=y)
             mean_flatness = np.mean(flatness)
             
-            ai_score = min(max(int(mean_flatness * 12000) % 100, 5), 95)
+            ai_score = min(max(int(mean_flatness * 8000) % 100, 5), 95)
             mfcc = librosa.feature.mfcc(y=y, sr=sr)
             mfcc_std = np.mean(np.std(mfcc, axis=1))
             
             if mfcc_std < 15:
-                ai_score += 20
+                ai_score += 15
             ai_score = min(ai_score, 99)
         except Exception:
-            ai_score = 50  
+            ai_score = 30  
 
         human_score = 100 - ai_score
-        verdict = "🛡️ GENUINE AUDIO" if ai_score < 45 else "🚨 AI VOICE NOTE / DEEPFAKE"
+        verdict = "🛡️ GENUINE AUDIO" if human_score > ai_score else "🚨 AI VOICE NOTE / DEEPFAKE"
         return verdict, human_score, ai_score
 
     def analyze_video(self, file_bytes):
@@ -122,18 +122,18 @@ class UkweliLensEngine:
             os.remove(temp_path)
             var_std = np.std(variances)
             
-            if 400 <= var_std <= 3500:
+            if 300 <= var_std <= 4000:
                 ai_score = 15
                 reason = "Natural frame variance and pixel consistency detected."
             else:
-                ai_score = 75
+                ai_score = 65
                 reason = "Irregular frame manipulation / AI encoding patterns discovered."
         except Exception:
-            ai_score = 50
+            ai_score = 40
             reason = "Processing error on internal frame layers."
 
         human_score = 100 - ai_score
-        verdict = "🛡️ GENUINE VIDEO" if ai_score < 50 else "🚨 AI DEEPFAKE VIDEO"
+        verdict = "🛡️ GENUINE VIDEO" if human_score > ai_score else "🚨 AI DEEPFAKE VIDEO"
         return verdict, human_score, ai_score, reason
 
 # --- WEB UI DESIGN ---
@@ -192,7 +192,7 @@ if uploaded_file is not None:
 
 # --- SIGNATURE FOOTER SECTION ---
 st.markdown("---")
-col_footer1, col_footer2 = st.columns(2) # KOSA LIMEREKEBISHWA HAPA
+col_footer1, col_footer2 = st.columns(2)
 with col_footer1:
     st.caption("UkweliLens Prototype | Built for Tanzania Media Innovation Symposium 2026")
 with col_footer2:
